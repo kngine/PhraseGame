@@ -1,25 +1,26 @@
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
+import { AnimatePresence, LayoutGroup, motion, type PanInfo } from 'framer-motion'
 import { useCallback, useMemo, useState } from 'react'
 import { Celebration } from './components/Celebration'
-import { CategoryTabs } from './components/CategoryTabs'
 import { SentenceSlot } from './components/SentenceSlot'
 import { WordCard } from './components/WordCard'
 import {
   buildSentence,
-  CATEGORY_META,
   PIVOT_PHRASES,
   TARGET_WORDS,
   type PivotPhrase,
-  type TargetCategory,
   type TargetWord,
 } from './data/phrases'
 import { useSpeech } from './hooks/useSpeech'
 
+const targetAccents = ['amber', 'rose', 'sky'] as const
+const targetPageSize = 10
+
 function App() {
-  const { speak, cancel } = useSpeech()
+  const { speakPivot, speakTarget, speakSentence, cancel } = useSpeech()
   const [selectedPivot, setSelectedPivot] = useState<PivotPhrase | null>(null)
   const [selectedTarget, setSelectedTarget] = useState<TargetWord | null>(null)
-  const [category, setCategory] = useState<TargetCategory>('animals')
+  const [targetPage, setTargetPage] = useState(0)
+  const [pageDirection, setPageDirection] = useState(1)
   const [celebrating, setCelebrating] = useState(false)
 
   const sentenceComplete = selectedPivot !== null && selectedTarget !== null
@@ -31,25 +32,52 @@ function App() {
     [selectedPivot, selectedTarget],
   )
 
-  const filteredTargets = useMemo(
-    () => TARGET_WORDS.filter((w) => w.category === category),
-    [category],
+  const targetPages = useMemo(() => {
+    const pages: TargetWord[][] = []
+    for (let i = 0; i < TARGET_WORDS.length; i += targetPageSize) {
+      pages.push(TARGET_WORDS.slice(i, i + targetPageSize))
+    }
+    return pages
+  }, [])
+
+  const currentTargets = targetPages[targetPage] ?? []
+
+  const goToTargetPage = useCallback(
+    (nextPage: number) => {
+      const lastPage = targetPages.length - 1
+      const wrappedPage = nextPage < 0 ? lastPage : nextPage > lastPage ? 0 : nextPage
+      const direction = nextPage > lastPage ? 1 : nextPage < 0 ? -1 : nextPage > targetPage ? 1 : -1
+      setPageDirection(direction)
+      setTargetPage(wrappedPage)
+    },
+    [targetPage, targetPages.length],
+  )
+
+  const handleTargetDragEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (info.offset.x < -60) {
+        goToTargetPage(targetPage + 1)
+      } else if (info.offset.x > 60) {
+        goToTargetPage(targetPage - 1)
+      }
+    },
+    [goToTargetPage, targetPage],
   )
 
   const handlePivotSelect = useCallback(
     (pivot: PivotPhrase) => {
       setSelectedPivot(pivot)
-      speak(pivot.text)
+      speakPivot(pivot.id)
     },
-    [speak],
+    [speakPivot],
   )
 
   const handleTargetSelect = useCallback(
     (target: TargetWord) => {
       setSelectedTarget(target)
-      speak(target.text)
+      speakTarget(target.id)
     },
-    [speak],
+    [speakTarget],
   )
 
   const handleClear = useCallback(() => {
@@ -63,12 +91,11 @@ function App() {
     if (!sentenceComplete || !fullSentence) return
 
     cancel()
-    speak(fullSentence, {
-      rate: 0.8,
+    speakSentence(selectedPivot!.id, selectedTarget!.id, {
       onEnd: () => setCelebrating(false),
     })
     setCelebrating(true)
-  }, [sentenceComplete, fullSentence, speak, cancel])
+  }, [sentenceComplete, selectedPivot, selectedTarget, speakSentence, cancel])
 
   return (
     <LayoutGroup>
@@ -175,7 +202,7 @@ function App() {
             <span className="sr-only">Step one: pick a phrase</span>
           </p>
         </div>
-        <div className="flex flex-1 items-center justify-center overflow-x-auto px-3 py-3">
+        <div className="flex flex-1 items-center justify-center overflow-y-auto px-3 py-3">
           <div className="flex flex-wrap justify-center gap-3">
             {PIVOT_PHRASES.map((pivot) => (
               <WordCard
@@ -197,49 +224,79 @@ function App() {
         className="flex flex-[1.2] min-h-0 flex-col border-t-4 border-white/30 bg-amber-50"
         aria-label="Choose a word"
       >
-        <div className="flex-shrink-0 space-y-2 bg-amber-100 px-3 py-2">
+        <div className="flex-shrink-0 bg-amber-100 px-3 py-2">
           <p className="flex items-center justify-center gap-2 text-lg font-extrabold text-amber-700">
             <span className="text-2xl" aria-hidden>
               2️⃣
             </span>
             <span className="sr-only">Step two: pick a word</span>
           </p>
-          <CategoryTabs active={category} onChange={setCategory} />
         </div>
-        <div className="flex flex-1 items-center justify-center overflow-x-auto px-3 py-3">
-          <motion.div
-            key={category}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex flex-wrap justify-center gap-3"
-          >
-            {filteredTargets.map((target) => {
-              const accentMap: Record<TargetCategory, 'amber' | 'rose' | 'sky'> = {
-                animals: 'amber',
-                food: 'rose',
-                clothing: 'sky',
-              }
-              return (
-                <WordCard
-                  key={target.id}
-                  icon={target.icon}
-                  label={target.text}
-                  accent={accentMap[target.category]}
-                  selected={selectedTarget?.id === target.id}
-                  layoutId={`target-${target.id}`}
-                  onTap={() => handleTargetSelect(target)}
-                />
-              )
-            })}
-          </motion.div>
+        <div className="flex flex-1 items-center justify-center overflow-hidden px-3 py-3">
+          <AnimatePresence mode="wait" custom={pageDirection}>
+            <motion.div
+              key={targetPage}
+              custom={pageDirection}
+              initial={{ opacity: 0, x: pageDirection * 90 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: pageDirection * -90 }}
+              transition={{ duration: 0.22 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.25}
+              onDragEnd={handleTargetDragEnd}
+              className="flex max-w-3xl flex-wrap justify-center gap-3"
+            >
+              {currentTargets.map((target, index) => {
+                const globalIndex = targetPage * targetPageSize + index
+                return (
+                  <WordCard
+                    key={target.id}
+                    icon={target.icon}
+                    label={target.text}
+                    accent={targetAccents[globalIndex % targetAccents.length]}
+                    selected={selectedTarget?.id === target.id}
+                    layoutId={`target-${target.id}`}
+                    onTap={() => handleTargetSelect(target)}
+                  />
+                )
+              })}
+            </motion.div>
+          </AnimatePresence>
         </div>
-        <div className="flex-shrink-0 pb-3 text-center">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white ${CATEGORY_META[category].color}`}
+        <div className="flex flex-shrink-0 items-center justify-center gap-3 bg-amber-100 px-3 pb-3">
+          <motion.button
+            type="button"
+            onClick={() => goToTargetPage(targetPage - 1)}
+            whileTap={{ scale: 0.9 }}
+            className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-amber-300 text-3xl font-black text-amber-800 shadow-md"
+            aria-label="Previous word page"
           >
-            <span aria-hidden>{CATEGORY_META[category].icon}</span>
-            <span className="sr-only">{CATEGORY_META[category].label}</span>
-          </span>
+            ‹
+          </motion.button>
+          <div className="flex items-center gap-2" aria-label={`Word page ${targetPage + 1} of ${targetPages.length}`}>
+            {targetPages.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => goToTargetPage(index)}
+                className={`h-4 w-4 rounded-full border-2 border-white ${
+                  index === targetPage ? 'bg-amber-600' : 'bg-amber-200'
+                }`}
+                aria-label={`Go to word page ${index + 1}`}
+                aria-current={index === targetPage ? 'page' : undefined}
+              />
+            ))}
+          </div>
+          <motion.button
+            type="button"
+            onClick={() => goToTargetPage(targetPage + 1)}
+            whileTap={{ scale: 0.9 }}
+            className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-amber-300 text-3xl font-black text-amber-800 shadow-md"
+            aria-label="Next word page"
+          >
+            ›
+          </motion.button>
         </div>
       </section>
     </div>

@@ -1,56 +1,98 @@
 import { useCallback, useEffect, useRef } from 'react'
 
+type SpeakOptions = {
+  onEnd?: () => void
+}
+
+function audioUrl(category: 'pivots' | 'targets', id: string): string {
+  return `/audio/${category}/${id}.m4a`
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export function useSpeech() {
-  const voicesReady = useRef(false)
+  const activeAudio = useRef<HTMLAudioElement | null>(null)
+  const queueId = useRef(0)
 
   useEffect(() => {
-    const loadVoices = () => {
-      voicesReady.current = true
-    }
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
-    loadVoices()
     return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+      queueId.current += 1
+      activeAudio.current?.pause()
+      activeAudio.current = null
     }
   }, [])
-
-  const pickVoice = useCallback((): SpeechSynthesisVoice | null => {
-    const voices = window.speechSynthesis.getVoices()
-    const preferred =
-      voices.find((v) => v.lang.startsWith('en') && v.name.includes('Female')) ??
-      voices.find((v) => v.lang.startsWith('en-US')) ??
-      voices.find((v) => v.lang.startsWith('en')) ??
-      voices[0]
-    return preferred ?? null
-  }, [])
-
-  const speak = useCallback(
-    (text: string, options?: { rate?: number; onEnd?: () => void }) => {
-      if (!('speechSynthesis' in window)) return
-
-      window.speechSynthesis.cancel()
-
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = options?.rate ?? 0.85
-      utterance.pitch = 1.1
-      utterance.volume = 1
-
-      const voice = pickVoice()
-      if (voice) utterance.voice = voice
-
-      if (options?.onEnd) {
-        utterance.onend = options.onEnd
-        utterance.onerror = options.onEnd
-      }
-
-      window.speechSynthesis.speak(utterance)
-    },
-    [pickVoice],
-  )
 
   const cancel = useCallback(() => {
-    window.speechSynthesis.cancel()
+    queueId.current += 1
+    activeAudio.current?.pause()
+    activeAudio.current = null
   }, [])
 
-  return { speak, cancel }
+  const playSequence = useCallback(
+    async (sources: string[], options?: SpeakOptions) => {
+      const id = ++queueId.current
+
+      for (let i = 0; i < sources.length; i++) {
+        const src = sources[i]
+        if (id !== queueId.current) return
+
+        if (i > 0) {
+          await delay(180)
+          if (id !== queueId.current) return
+        }
+
+        try {
+          const audio = new Audio(src)
+          activeAudio.current = audio
+          await new Promise<void>((resolve, reject) => {
+            audio.onended = () => resolve()
+            audio.onerror = () => reject(new Error(`Failed to play ${src}`))
+            void audio.play().catch(reject)
+          })
+        } catch {
+          if (id === queueId.current) {
+            options?.onEnd?.()
+          }
+          return
+        }
+      }
+
+      if (id === queueId.current) {
+        activeAudio.current = null
+        options?.onEnd?.()
+      }
+    },
+    [],
+  )
+
+  const speakPivot = useCallback(
+    (id: string, options?: SpeakOptions) => {
+      cancel()
+      void playSequence([audioUrl('pivots', id)], options)
+    },
+    [cancel, playSequence],
+  )
+
+  const speakTarget = useCallback(
+    (id: string, options?: SpeakOptions) => {
+      cancel()
+      void playSequence([audioUrl('targets', id)], options)
+    },
+    [cancel, playSequence],
+  )
+
+  const speakSentence = useCallback(
+    (pivotId: string, targetId: string, options?: SpeakOptions) => {
+      cancel()
+      void playSequence(
+        [audioUrl('pivots', pivotId), audioUrl('targets', targetId)],
+        options,
+      )
+    },
+    [cancel, playSequence],
+  )
+
+  return { speakPivot, speakTarget, speakSentence, cancel }
 }
