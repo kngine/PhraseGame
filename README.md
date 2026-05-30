@@ -5,7 +5,6 @@ A kid-friendly web app that helps young children practice two- and three-word se
 ## Quick start
 
 ```bash
-cd pivot-phrases
 npm install
 npm run dev
 ```
@@ -30,7 +29,6 @@ Open the URL shown in the terminal (usually `http://localhost:5173`).
 ## Build
 
 ```bash
-cd pivot-phrases
 npm run build
 npm run preview
 ```
