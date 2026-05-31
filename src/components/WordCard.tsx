@@ -24,15 +24,6 @@ export function WordCard({
   layoutId,
   onTap,
 }: WordCardProps) {
-  if (selected && layoutId) {
-    return (
-      <div
-        className="min-h-[5.5rem] min-w-[5.5rem] rounded-3xl border-4 border-dashed border-gray-300/60 bg-gray-100/40"
-        aria-hidden
-      />
-    )
-  }
-
   return (
     <motion.button
       type="button"
@@ -42,14 +33,15 @@ export function WordCard({
       whileHover={{ scale: 1.03 }}
       animate={selected ? { scale: 1.05 } : { scale: 1 }}
       className={`
-        flex min-h-[5.5rem] min-w-[5.5rem] flex-col items-center justify-center gap-1
-        rounded-3xl border-4 p-3 shadow-lg transition-colors
+        flex h-[clamp(4.15rem,12vw,6.5rem)] w-[clamp(4.15rem,12vw,6.5rem)]
+        flex-shrink-0 flex-col items-center justify-center gap-1
+        rounded-[1.35rem] border-[3px] p-2 shadow-lg transition-colors sm:border-4 md:rounded-3xl
         ${accentStyles[accent]}
-        ${selected ? 'ring-4 ring-yellow-300' : ''}
+        ${selected ? 'ring-4 ring-yellow-300 ring-offset-2' : ''}
       `}
       aria-label={label}
     >
-      <span className="text-4xl leading-none sm:text-5xl" role="img" aria-hidden>
+      <span className="text-[clamp(2rem,6.8vw,3.75rem)] leading-none" role="img" aria-hidden>
         {icon}
       </span>
       <span className="sr-only">{label}</span>

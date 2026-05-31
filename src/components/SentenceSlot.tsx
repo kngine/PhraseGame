@@ -23,8 +23,9 @@ export function SentenceSlot({
   return (
     <div
       className={`
-        relative flex h-[7.5rem] w-[7.5rem] flex-shrink-0 items-center justify-center
-        rounded-3xl border-4 border-dashed sm:h-[8.5rem] sm:w-[8.5rem]
+        relative flex h-[clamp(4.5rem,15vw,8.5rem)] w-[clamp(4.5rem,15vw,8.5rem)]
+        flex-shrink-0 items-center justify-center rounded-[1.35rem] border-[3px] border-dashed
+        sm:border-4 md:rounded-3xl
         ${slotStyles[accent]}
       `}
       aria-label={icon ? label : `Empty slot: ${label}`}
@@ -40,7 +41,7 @@ export function SentenceSlot({
             transition={{ type: 'spring', stiffness: 400, damping: 22 }}
             className="flex flex-col items-center"
           >
-            <span className="text-6xl sm:text-7xl" role="img" aria-hidden>
+            <span className="text-[clamp(2.75rem,9vw,4.5rem)] leading-none" role="img" aria-hidden>
               {icon}
             </span>
             <span className="sr-only">{label}</span>
@@ -50,7 +51,7 @@ export function SentenceSlot({
             key="placeholder"
             initial={{ opacity: 0.4 }}
             animate={{ opacity: 0.35 }}
-            className="text-5xl opacity-40 sm:text-6xl"
+            className="text-[clamp(2.5rem,8vw,4rem)] opacity-40"
             aria-hidden
           >
             {placeholderIcon}
