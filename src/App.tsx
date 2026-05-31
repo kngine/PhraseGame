@@ -78,12 +78,6 @@ function App() {
     [speakTarget],
   )
 
-  const handleClear = useCallback(() => {
-    cancel()
-    setSelectedPivot(null)
-    setSelectedTarget(null)
-  }, [cancel])
-
   const handlePlay = useCallback(() => {
     if (!sentenceComplete || !fullSentence) return
 
@@ -104,6 +98,7 @@ function App() {
               layoutId={selectedPivot ? `pivot-${selectedPivot.id}` : undefined}
               placeholderIcon="➕"
               accent="violet"
+              showText={selectedPivot !== null}
             />
 
             <motion.span
@@ -123,41 +118,24 @@ function App() {
             />
           </div>
 
-          <div className="flex flex-col items-center gap-2">
           <motion.button
             type="button"
-            onClick={handleClear}
-            whileTap={{ scale: 0.85, rotate: -15 }}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border-[3px] border-white/80 bg-red-400 text-2xl shadow-lg sm:h-14 sm:w-14 sm:border-4 sm:text-3xl"
-            aria-label="Clear and start over"
+            onClick={handlePlay}
+            disabled={!sentenceComplete}
+            whileTap={sentenceComplete ? { scale: 0.92 } : undefined}
+            whileHover={sentenceComplete ? { scale: 1.04 } : undefined}
+            className={`
+              flex h-[clamp(5rem,16vw,8rem)] w-[clamp(5rem,16vw,8rem)] items-center justify-center
+              rounded-[1.75rem] border-4 text-white shadow-xl transition
+              ${sentenceComplete ? 'border-yellow-600 bg-yellow-400' : 'border-white/60 bg-white/30 opacity-60'}
+            `}
+            aria-label={sentenceComplete ? `Play ${fullSentence}` : 'Select a phrase and word to play'}
           >
-            🗑️
+            <span className="text-[clamp(3rem,10vw,5.5rem)] leading-none" aria-hidden>
+              ▶️
+            </span>
+            <span className="sr-only">Play</span>
           </motion.button>
-
-          <AnimatePresence>
-            {sentenceComplete && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-              >
-                <motion.button
-                  type="button"
-                  onClick={handlePlay}
-                  whileTap={{ scale: 0.9 }}
-                  whileHover={{ scale: 1.05 }}
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl border-[3px] border-yellow-600 bg-yellow-400 text-white shadow-lg sm:h-14 sm:w-14 sm:border-4"
-                  aria-label={`Play ${fullSentence}`}
-                >
-                  <span className="text-3xl sm:text-4xl" aria-hidden>
-                    ▶️
-                  </span>
-                  <span className="sr-only">Play</span>
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          </div>
         </div>
       </header>
 

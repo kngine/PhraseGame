@@ -28,6 +28,9 @@ export const PIVOT_PHRASES: PivotPhrase[] = [
 ]
 
 export const TARGET_WORDS: TargetWord[] = [
+  { id: 'potty', text: 'potty', icon: '🚽' },
+  { id: 'pee', text: 'pee', icon: '🚽' },
+  { id: 'poop', text: 'poop', icon: '💩' },
   { id: 'dog', text: 'dog', icon: '🐶' },
   { id: 'cat', text: 'cat', icon: '🐱' },
   { id: 'bird', text: 'bird', icon: '🐦' },
@@ -76,9 +79,6 @@ export const TARGET_WORDS: TargetWord[] = [
   { id: 'cup', text: 'cup', icon: '🥤' },
   { id: 'car', text: 'car', icon: '🚗' },
   { id: 'bed', text: 'bed', icon: '🛏️' },
-  { id: 'potty', text: 'potty', icon: '🚽' },
-  { id: 'pee', text: 'pee', icon: '🚽' },
-  { id: 'poop', text: 'poop', icon: '💩' },
 ]
 
 export function buildSentence(pivot: PivotPhrase, target: TargetWord): string {

@@ -6,6 +6,7 @@ type SentenceSlotProps = {
   layoutId?: string
   placeholderIcon: string
   accent: 'violet' | 'emerald'
+  showText?: boolean
 }
 
 const slotStyles = {
@@ -19,6 +20,7 @@ export function SentenceSlot({
   layoutId,
   placeholderIcon,
   accent,
+  showText,
 }: SentenceSlotProps) {
   return (
     <div
@@ -39,12 +41,25 @@ export function SentenceSlot({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.5, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-            className="flex flex-col items-center"
+            className="flex h-full w-full flex-col items-center justify-center px-1 text-center"
           >
-            <span className="text-[clamp(2.75rem,9vw,4.5rem)] leading-none" role="img" aria-hidden>
-              {icon}
-            </span>
-            <span className="sr-only">{label}</span>
+            {showText ? (
+              <>
+                <span className="text-[clamp(1.05rem,3.5vw,2rem)] font-black leading-tight text-violet-800">
+                  {label}
+                </span>
+                <span className="mt-1 text-[clamp(1.25rem,4vw,2rem)] leading-none" role="img" aria-hidden>
+                  {icon}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[clamp(2.75rem,9vw,4.5rem)] leading-none" role="img" aria-hidden>
+                  {icon}
+                </span>
+                <span className="sr-only">{label}</span>
+              </>
+            )}
           </motion.div>
         ) : (
           <motion.span
